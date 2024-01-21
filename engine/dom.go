@@ -19,14 +19,14 @@ type NodeType struct {
   Text string
   Element ElementData
 }
-func text(data string) Node {
+func Text(data string) Node {
   return Node{
     children: []Node{},
     node_type: NodeType{Text: data},
   }
 }
 
-func elem(name string, attrs AttrMap, children []Node) Node {
+func Elem(name string, attrs AttrMap, children []Node) Node {
   return Node{
     children: children,
     node_type: NodeType{Element: ElementData{tag_name: name, attributes: attrs}},

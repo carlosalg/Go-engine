@@ -1,8 +1,10 @@
 package engine
 
 import (
-  "strings"
-  "unicode/utf8"
+	"strings"
+	"unicode"
+	"unicode/utf8"
+  "engine/dom"
 )
 
 type Parser struct {
@@ -32,4 +34,52 @@ func (p *Parser)consumeChar() rune {
   nextPos := size
   p.pos += nextPos
   return currChar
+}
+
+func (p *Parser)consumeWhile(test func(rune)bool) string{
+  var result strings.Builder
+  for !p.eof() && test(p.nextChar()){
+    result.WriteRune(p.consumeChar())
+  }
+  return result.String()
+}
+
+func (p *Parser)consumeWhiteSpace(){
+  p.consumeWhile(unicode.IsSpace)
+}
+
+func (p *Parser)parseTagName() string {
+  result := p.consumeWhile(func(c rune)bool{
+    switch {
+    case 'a' <= c && c <= 'z':
+      return true
+    case 'A' <= c && c <= 'Z':
+      return true
+    case '0' <= c && c <= '9':
+      return true
+    default:
+      return false
+    }
+  })
+  return result
+}
+
+//Parse functions
+
+func (p *Parser)parseNode() dom.Node {
+  switch p.nextChar() {
+    case '<':
+      return p.parseElement()
+    default :
+      return p.parseText()
+  }
+  
+}
+
+func (p *Parser)parseText() dom.Node {
+  return dom.Text(p.consumeWhile(func(c rune)bool{return c != '<'})) 
+}
+
+func (p *Parser)parseElement() dom.Node {
+  //TODO:implemt this 
 }
