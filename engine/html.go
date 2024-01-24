@@ -1,10 +1,11 @@
 package engine
 
 import (
+	"engine/dom"
+	"fmt"
 	"strings"
 	"unicode"
 	"unicode/utf8"
-  "engine/dom"
 )
 
 type Parser struct {
@@ -81,5 +82,88 @@ func (p *Parser)parseText() dom.Node {
 }
 
 func (p *Parser)parseElement() dom.Node {
-  //TODO:implemt this 
+  if char := p.consumeChar(); char != '<'{
+    return fmt.Errorf("Expected '<' at the beggining, got '%c'", char)
+  }
+  tagName := p.parseTagName()
+  attrs := p.parseAttributes()
+  if char := p.consumeChar(); char != '>'{  
+    return fmt.Errorf("Expected '<' at the beggining, got '%c'", char)
+  }
+  
+  children := p.parseNodes()
+if char := p.consumeChar(); char != '<'{  
+    return fmt.Errorf("Expected '<' at the beggining, got '%c'", char)
+  }
+if char := p.consumeChar(); char != '/'{  
+    return fmt.Errorf("Expected '/' at the beggining, got '%c'", char)
+  }
+if tag := p.parseTagName(); tag != tagName {  
+    return fmt.Errorf("Expected  tag, got '%s'", tag)
+  }
+if char := p.consumeChar(); char != '>'{  
+    return fmt.Errorf("Expected '>' at the beggining, got '%c'", char)
+  }
+  
+  return dom.Elem(tagName,attrs,children)
 }
+
+func (p *Parser) parseAttr() (string,string){
+  name := p.parseTagName()
+  if char := p.consumeChar(); char != '='{  
+    err := fmt.Errorf("Expected '=' at the beggining, got '%c'", char)
+    return "", err.Error()
+  }
+  value := p.parseAttrValue()
+  return name,value
+}
+
+func (p *Parser)parseAttrValue() string {
+  openQuote := p.consumeChar()
+
+  if openQuote != '"' || openQuote != '\'' {
+    err := fmt.Errorf(`Expected " or ', got '%c' `, openQuote)
+    return err.Error()
+  }
+
+  value := p.consumeWhile(func(c rune) bool{return c != openQuote})
+
+  if char := p.consumeChar(); char != openQuote {
+    err := fmt.Errorf(`Expected " or ' found '%c'`, openQuote)
+    return err.Error()
+  }
+
+  return value
+
+}
+
+func (p *Parser) parseAttributes() dom.AttrMap {
+  attributes := make(map[string]string)
+  for {
+    p.consumeWhiteSpace()
+
+    if p.nextChar() == '>'{
+      break
+    }
+
+    name, value := p.parseAttr()
+
+    attributes[name] = value
+  }
+  return attributes
+}
+
+func (p *Parser) parseNodes() []dom.Node {
+  var nodes []dom.Node 
+  for {
+    p.consumeWhiteSpace()
+    if p.eof() || p.startsWith("</") {
+      break
+    }
+
+    nodes = append(nodes, p.parseNode())
+  }
+  return nodes 
+}
+
+
