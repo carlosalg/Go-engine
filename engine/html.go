@@ -1,16 +1,21 @@
 package engine
 
 import (
-	"engine/dom"
 	"fmt"
 	"strings"
 	"unicode"
 	"unicode/utf8"
+  "log"
 )
 
 type Parser struct {
   pos int
   input string
+}
+
+type ParseError struct{
+  error
+  ExpectedChar rune
 }
 
 func (p *Parser)nextChar() rune{
@@ -67,45 +72,67 @@ func (p *Parser)parseTagName() string {
 
 //Parse functions
 
-func (p *Parser)parseNode() dom.Node {
+func (p *Parser)parseNode() (Node,error) {
   switch p.nextChar() {
     case '<':
       return p.parseElement()
     default :
-      return p.parseText()
+      return p.parseText(), nil
   }
   
 }
 
-func (p *Parser)parseText() dom.Node {
-  return dom.Text(p.consumeWhile(func(c rune)bool{return c != '<'})) 
+func (p *Parser)parseText() Node {
+  return Text(p.consumeWhile(func(c rune)bool{return c != '<'})) 
 }
 
-func (p *Parser)parseElement() dom.Node {
+func (p *Parser)parseElement() (Node, error) {
+  var node Node 
   if char := p.consumeChar(); char != '<'{
-    return fmt.Errorf("Expected '<' at the beggining, got '%c'", char)
+    return node,&ParseError{
+      error: fmt.Errorf("Expected '<' at the beggining, got '%c'", char),
+      ExpectedChar: '<',
+    }
   }
+  
   tagName := p.parseTagName()
   attrs := p.parseAttributes()
+
   if char := p.consumeChar(); char != '>'{  
-    return fmt.Errorf("Expected '<' at the beggining, got '%c'", char)
+    return node, &ParseError{
+      error: fmt.Errorf("Expected '<' at the beggining, got '%c'", char),
+      ExpectedChar: '>',
+    }
   }
   
   children := p.parseNodes()
-if char := p.consumeChar(); char != '<'{  
-    return fmt.Errorf("Expected '<' at the beggining, got '%c'", char)
+
+ if char := p.consumeChar(); char != '<'{  
+    return node,&ParseError{
+      error: fmt.Errorf("Expected '<' at the beggining, got '%c'", char),
+      ExpectedChar: '<',
+    }
   }
-if char := p.consumeChar(); char != '/'{  
-    return fmt.Errorf("Expected '/' at the beggining, got '%c'", char)
+
+ if char := p.consumeChar(); char != '/'{  
+    return node, &ParseError{
+      error: fmt.Errorf("Expected '/' at the beggining, got '%c'", char),
+      ExpectedChar: '/',
+    }
   }
-if tag := p.parseTagName(); tag != tagName {  
-    return fmt.Errorf("Expected  tag, got '%s'", tag)
+
+ if tag := p.parseTagName(); tag != tagName {  
+    log.Println("Tag mistmach:", tag)
   }
-if char := p.consumeChar(); char != '>'{  
-    return fmt.Errorf("Expected '>' at the beggining, got '%c'", char)
+
+ if char := p.consumeChar(); char != '>'{  
+    return node, &ParseError{
+      error: fmt.Errorf("Expected '>' at the beggining, got '%c'", char),
+      ExpectedChar: '>',
+    }
   }
-  
-  return dom.Elem(tagName,attrs,children)
+  node = Elem(tagName, attrs, children)
+  return node, nil
 }
 
 func (p *Parser) parseAttr() (string,string){
@@ -121,7 +148,7 @@ func (p *Parser) parseAttr() (string,string){
 func (p *Parser)parseAttrValue() string {
   openQuote := p.consumeChar()
 
-  if openQuote != '"' || openQuote != '\'' {
+  if openQuote != '"' {
     err := fmt.Errorf(`Expected " or ', got '%c' `, openQuote)
     return err.Error()
   }
@@ -137,7 +164,7 @@ func (p *Parser)parseAttrValue() string {
 
 }
 
-func (p *Parser) parseAttributes() dom.AttrMap {
+func (p *Parser) parseAttributes() AttrMap {
   attributes := make(map[string]string)
   for {
     p.consumeWhiteSpace()
@@ -153,15 +180,15 @@ func (p *Parser) parseAttributes() dom.AttrMap {
   return attributes
 }
 
-func (p *Parser) parseNodes() []dom.Node {
-  var nodes []dom.Node 
+func (p *Parser) parseNodes() []Node {
+  var nodes []Node 
   for {
     p.consumeWhiteSpace()
     if p.eof() || p.startsWith("</") {
       break
     }
-
-    nodes = append(nodes, p.parseNode())
+    node, _ := p.parseNode()
+    nodes = append(nodes, node)
   }
   return nodes 
 }
