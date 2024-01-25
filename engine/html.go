@@ -193,4 +193,15 @@ func (p *Parser) parseNodes() []Node {
   return nodes 
 }
 
+func Parse(source string) Node {
+  nodes := []Node{}
+  parser := Parser{pos: 0, input: source}
+  nodes = parser.parseNodes()
+  if len(nodes) == 1 {
+    return nodes[0]
+  } else {
+    var emptyAttrs AttrMap
+    return Elem("html", emptyAttrs, nodes)
+  }
+}
 
