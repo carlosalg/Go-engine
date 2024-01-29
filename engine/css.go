@@ -44,4 +44,34 @@ type Color struct {
   b uint8
   a uint8
 }
- 
+
+type Specificity struct {
+  vol1 int
+  vol2 int
+  vol3 int
+}
+
+func (s *Selector) Specificity() Specificity {
+  simple := s.Simple
+  a := len(simple.Id.Value())
+  b := len(simple.Class)
+  c := len(simple.TagName.Value())
+  return Specificity{vol1: a,vol2: b, vol3: c}
+}
+
+func (v *Value) ToPx() float32 {
+  if v.Length.Unit == Px {
+    return v.Length.Value
+  }
+  return 0.0
+}
+
+func ParseCss(source string) Stylesheet {
+  parser := ParserCss {pos: 0, input: source}
+  return Stylesheet {rules: parser.parseRules()}
+}
+
+type ParserCss struct {
+  pos uint
+  input string
+}
