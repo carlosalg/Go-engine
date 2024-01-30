@@ -1,5 +1,11 @@
 package engine
 
+import (
+	"strings"
+	"unicode"
+	"unicode/utf8"
+)
+
 type Stylesheet struct {
   rules []Rule 
 }
@@ -72,6 +78,62 @@ func ParseCss(source string) Stylesheet {
 }
 
 type ParserCss struct {
-  pos uint
+  pos int
   input string
+}
+
+func (p *ParserCss)nextChar() rune {
+  if p.pos < len(p.input){
+    char := rune(p.input[p.pos])
+    return char 
+  }
+  return 0
+}
+
+func (p *ParserCss)eof() bool {
+  return p.pos >= len(p.input)
+}
+
+func (p *ParserCss)consumeChar() rune {
+  r, size := utf8.DecodeRuneInString(p.input[p.pos:])
+  currChar := r
+  nextPos := size
+  p.pos += nextPos
+  return currChar
+}
+
+func (p *ParserCss)consumeWhile(test func(rune)bool) string {
+  var result strings.Builder
+  for !p.eof() && test(p.nextChar()){
+    result.WriteRune(p.consumeChar())
+  }
+  return result.String()
+}
+
+func (p *ParserCss)consumeWhiteSpace() {
+  p.consumeWhile(unicode.IsSpace)
+}
+
+//Parsing methods
+
+func (p *ParserCss) parseRules() []Rule {
+  var rules []Rule
+  for{
+    p.consumeWhiteSpace()
+    if p.eof() {break}
+    rule := p.parseRule()
+    rules = append(rules, rule)
+  }
+  return rules
+}
+
+func (p *ParserCss) parseRule() Rule {
+  return Rule{selectors: p.parseSelectors(), declarations: p.parseDeclarations()}
+}
+
+func (p *ParserCss) parseSelectors() []Selector {
+  var selectors []Selector
+  for{
+    //TODO
+  }
 }
