@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"sort"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -20,8 +21,8 @@ type Selector struct {
 }
 
 type SimpleSelector struct {
-  TagName Optional[string] 
-  Id Optional[string]
+  TagName NoValue[string] 
+  Id NoValue[string]
   Class []string
 }
 
@@ -57,11 +58,27 @@ type Specificity struct {
   vol3 int
 }
 
+func (s Specificity) Less(other Specificity) bool {
+  if s.vol1 != other.vol1{
+    return s.vol1 > other.vol1
+  } else if s.vol2 != other.vol2 {
+    return s.vol2 > other.vol2
+  } else {
+    return s.vol3 > other.vol3
+  }
+}
+
 func (s *Selector) Specificity() Specificity {
   simple := s.Simple
-  a := len(simple.Id.Value())
+  a := 0 
+  if simple.Id.HasValue() {
+    a = len(simple.Id.Value())
+  }
   b := len(simple.Class)
-  c := len(simple.TagName.Value())
+  c := 0
+  if simple.TagName.HasValue() {
+    c = len(simple.TagName.Value())
+  }
   return Specificity{vol1: a,vol2: b, vol3: c}
 }
 
@@ -134,6 +151,30 @@ func (p *ParserCss) parseRule() Rule {
 func (p *ParserCss) parseSelectors() []Selector {
   var selectors []Selector
   for{
-    //TODO
+    selectors = append(selectors, p.parseSimpleSelector())
+    p.consumeWhiteSpace()
+    if p.nextChar() == ',' {
+        p.consumeChar()
+        p.consumeWhiteSpace()
+    } else if p.nextChar() == '{'{
+      break
+    }
+    
   }
+  sort.Slice(selectors,func(i, j int) bool{
+    return selectors[j].Specificity().Less(selectors[i].Specificity()) ||
+
+           (selectors[j].Specificity() == selectors[i].Specificity() && 
+         selectors[j].Simple.TagName.Value() < selectors[i].Simple.TagName.Value())
+  })
+  return selectors
+}
+
+func (p *ParserCss) parseSimpleSelector() SimpleSelector{
+  selector := SimpleSelector{
+    TagName: NoValue[string]{}, 
+    Id:      NoValue[string]{}, 
+    Class:   []string{},
+  }
+
 }
