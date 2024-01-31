@@ -21,8 +21,8 @@ type Selector struct {
 }
 
 type SimpleSelector struct {
-  TagName NoValue[string] 
-  Id NoValue[string]
+  TagName Optional[string] 
+  Id Optional[string]
   Class []string
 }
 

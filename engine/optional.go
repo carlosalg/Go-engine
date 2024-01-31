@@ -21,11 +21,11 @@
  //Here methods if it has no value
  type NoValue[T any] struct {}
 
- func(n *NoValue[T]) HasValue() bool {
+ func(n NoValue[T]) HasValue() bool {
    return false
  }
 
- func (n *NoValue[T]) Value() T {
+ func (n NoValue[T]) Value() T {
    return *new(T)
  }
 
