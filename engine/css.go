@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 	"unicode"
@@ -151,7 +152,7 @@ func (p *ParserCss) parseRule() Rule {
 func (p *ParserCss) parseSelectors() []Selector {
   var selectors []Selector
   for{
-    selectors = append(selectors, p.parseSimpleSelector())
+    selectors = append(selectors, Selector{Simple: p.parseSimpleSelector()})
     p.consumeWhiteSpace()
     if p.nextChar() == ',' {
         p.consumeChar()
@@ -176,5 +177,33 @@ func (p *ParserCss) parseSimpleSelector() SimpleSelector{
     Id:      NoValue[string]{}, 
     Class:   []string{},
   }
-
+  for !p.eof() {
+    switch p.nextChar() {
+    case '#': 
+      p.consumeChar()
+      selector.Id =  SomeValue[string]{value: p.parseIdentifier()}
+    case '.':
+      p.consumeChar()
+      selector.Class = append(selector.Class, p.parseIdentifier())
+    case '*':
+      p.consumeChar()
+    default:
+      if validIdentifierChar(p.nextChar()){
+        selector.TagName = SomeValue[string]{value: p.parseIdentifier()}
+      } else {
+        break
+      }
+    }
+  }
+  return selector
 }
+
+func(p *ParserCss) parseDeclaration() Declaration {
+  propertyName := p.parseIdentifier()
+  p.consumeWhiteSpace()
+  if p.consumeChar() != ':'{
+    err := fmt.Errorf("expected ':' found: '%c' ", p.consumeChar())
+    //TODO
+  }
+}
+

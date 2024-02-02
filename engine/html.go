@@ -200,7 +200,7 @@ func Parse(source string) Node {
   if len(nodes) == 1 {
     return nodes[0]
   } else {
-    var emptyAttrs AttrMap
+  var emptyAttrs AttrMap
     return Elem("html", emptyAttrs, nodes)
   }
 }
