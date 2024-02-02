@@ -53,6 +53,16 @@ type Color struct {
   a uint8
 }
 
+//Error check
+
+type ParseCssError struct {
+  message string 
+}
+
+func(e *ParseCssError) Error() string {
+  return e.message
+}
+
 type Specificity struct {
   vol1 int
   vol2 int
@@ -146,7 +156,8 @@ func (p *ParserCss) parseRules() []Rule {
 }
 
 func (p *ParserCss) parseRule() Rule {
-  return Rule{selectors: p.parseSelectors(), declarations: p.parseDeclarations()}
+  declared, _ := p.parseDeclarations()
+  return Rule{selectors: p.parseSelectors(), declarations: declared}
 }
 
 func (p *ParserCss) parseSelectors() []Selector {
@@ -198,12 +209,37 @@ func (p *ParserCss) parseSimpleSelector() SimpleSelector{
   return selector
 }
 
-func(p *ParserCss) parseDeclaration() Declaration {
+func(p *ParserCss) parseDeclaration() (Declaration, error) {
   propertyName := p.parseIdentifier()
   p.consumeWhiteSpace()
   if p.consumeChar() != ':'{
-    err := fmt.Errorf("expected ':' found: '%c' ", p.consumeChar())
-    //TODO
+    return Declaration{}, &ParseCssError{fmt.Sprintf("expected ':' found: '%c' ", p.consumeChar())}
   }
+  p.consumeWhiteSpace()
+  value := p.parseValue()
+  p.consumeWhiteSpace()
+  if p.consumeChar() != ';'{
+    return Declaration{}, &ParseCssError{fmt.Sprintf("expected ';' found: '%c' ", p.consumeChar())}
+  }
+  return Declaration {
+    name: propertyName,
+    value: value,
+  }, &ParseCssError{}
 }
 
+func(p *ParserCss) parseDeclarations() ([]Declaration, error) {
+  if p.consumeChar() != '{' {
+    return []Declaration{}, &ParseCssError{fmt.Sprintf("expected '{' '%c'", p.consumeChar())}
+  }
+  declarations := []Declaration{}
+  for{
+    p.consumeWhiteSpace()
+    if p.nextChar() == '}' {
+      p.consumeChar()
+      break 
+    }
+    declaration, _ := p.parseDeclaration()
+    declarations = append(declarations, declaration)
+  }
+  return declarations, &ParseCssError{}
+}
