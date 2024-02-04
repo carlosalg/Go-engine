@@ -3,6 +3,7 @@ package engine
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -242,4 +243,48 @@ func(p *ParserCss) parseDeclarations() ([]Declaration, error) {
     declarations = append(declarations, declaration)
   }
   return declarations, &ParseCssError{}
+}
+
+func (p *ParserCss) parseValue() Value {
+  value := Value{}
+  switch p.nextChar() {
+  case '0','1','2','3','4','5','6','7','8','9':
+    p.parseLength()
+  case '#':
+    p.parseColor()
+  default:
+    value.Keyword= p.parseIdentifier()
+  } 
+  return value
+}
+
+func (p *ParserCss) parseLength() Value {
+  length := Value{}
+  length.Length.Value = p.parseFloat()
+  unit, _:= p.parseUnit()
+  length.Length.Unit = unit 
+  return length
+}
+
+func (p *ParserCss) parseFloat() float32 {
+  s := p.consumeWhile(func(c rune) bool {
+    switch c {
+      case '0','1','2','3','4','5','6','7','8','9','.':
+        return true 
+      default:
+        return false 
+    }
+  })
+  str, _ := strconv.ParseFloat(s, 32)
+  return float32(str)
+}
+
+func (p *ParserCss) parseUnit() (Unit, error) {
+  var unit Unit
+  if strings.ToLower(parseIdentifier()) == "px" {
+    return Px, &ParseCssError{} 
+  } else {
+    return unit, &ParseCssError{fmt.Sprintf("unexpected unit")}
+  }
+
 }
